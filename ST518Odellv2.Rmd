@@ -1,0 +1,123 @@
+---
+title: "Homework 6"
+author: "Christopher Odell"
+output:
+  html_document:
+    df_print: paged
+---
+
+> library's
+
+```{r}
+library(tidyverse)
+library(vcdExtra)
+library(magrittr)
+library(MASS)
+library(pscl)
+library(VGAM)
+```
+
+pull in data
+
+```{r}
+load("DT.rda")
+
+work <- dt
+
+```
+
+
+# Question 1 R
+
+ > Part A
+ 
+ Produce a histogram
+
+```{r}
+
+ggplot(data = work, aes(x = ofp, y = ..density..)) +
+    geom_histogram(bins = 12, colour = "black", fill = "white") +
+    ggtitle("Visists Density")
+
+```
+
+
+Given that there are people like myself who do not go to the doctors unless I have too, my guess there are a lot of people who would count as a "excess" zero in the data, as we do not necessarily believe in proactive care rather only reactive. Then there are "True" zeros, were some people might want to go and be proactive but cannot afford a visit, or might not have access to it during a specific period of time. (Could even be on vacation and had to postpone)
+
+The models that stand out at first, is the zero inflated binomial given that the data is not over a specific period of time and might not meet the qualifications for a Poisson distribution if n is fixed plus with the high counts I would be worried that the variation cannot be conveyed by one statistic \lambda. If the data does fit a Poisson qualification than a zero inflated Poisson would be my second model fit which I would have to compare against the zero inflated binomial to compare the overdispersion and model fits. We have a right skew, which aligns with the look. The counts are all positive. There does appear to be some outliers which could mean outliers or over dispersion but that actually might not be overdispersion as we would expect some counts to be high if individuals had chronic issues and or poor conditions. Using the zero inflated since the zero values are very high counts compared to the rest of the data. A possible hurdle model would work, but in order to avoid data snooping and the fact that I can think of some possible true zeros vs excessive zeros I don't want to use that. I will go with the two zero-inflated models.
+
+
+> part B
+
+Fit the model's and provide the AIC comparisons
+
+```{r}
+mod.nb0 <- zeroinfl(ofp ~ hosp + health + numchron + gender + school + privins,
+  dist = "negbin", data = work)
+summary(mod.nb0)
+
+mod.p0 <- zeroinfl(ofp ~ hosp + health + numchron + gender + school + privins,
+  dist = "poisson", data = work)
+summary(mod.p0)
+
+AIC(mod.nb0,mod.p0)
+
+```
+
+The AIC for the models are 24,215.29 for the zero inflated negative binomial (ZINB) and 32,300.06 for the zero inflated Poisson (ZIP). This would indicate that I should use the ZINB model since it has a lower AIC. Additionally, while looking at the output, I notice that the theta coefficient was significant, which would indicate over dispersion. The Pearson residuals would also be an indication for some concern of over dispersion with the max value being so high compared to any other residual. 
+
+
+> part C
+
+Interpret the model, and write a sentence summarizing the findings. 
+
+There is a significant difference between the ZIP and ZINB models, according to the AIC. We would proceed forward to make inference on the zero inflated negative binomial model, so we can account for the over dispersion. With the $\hat\theta$ larger than 1, and our Poisson residuals having a max of 17.7 with a 75th quartile at 0.3256 there is supporting evidence that the overdisperion is significant. This is followed by the log(theta) p-value < 0.0001. Other things to note about the model fit, in our pi_i fitted model fit the numchron, gender, school and privient insurance are significant p-values to fit one model, where in the model to fit our zero binomial that follows a Poisson foundation all covariates are significant. When we ran the Poisson model we had a higher level of significance for more covariates and had an additional significant explanatory variable for the pi_i fitted model. To further look our interpretation we can fit more information about our model. To verify that my hypothesis seemed to be logical I went ahead and fit a negative binomial below and compared AIC and BIC using the vuong test. The ZINB still had the lower AIC between the two models, and I stayed with the negative binomial them since the ZIP was a bad fit which tells me the Poisson models are not something I should be looking at, and the theta informed me that over dispersion is a concern. After that we look at the coefficients and 
+
+
+
+```{r}
+
+
+mod.nb2 <- glm.nb(ofp ~ hosp + health + numchron + gender + school + privins,data = work)
+summary(mod.nb2)
+
+vuong(mod.nb0, mod.nb2)
+```
+
+
+
+```{r}
+
+summary(mod.nb0)$coefficients[[1]][, 1]
+summary(mod.nb0)$coefficients[[2]][, 1]
+
+```
+
+
+"A person of with excellent health is predicted to make less visits $1 - exp(-0.314) = 26.91$ less than a person of a classification of lower health quality *among all of those wanting and able to make a trip to see a phyisician (i.e., among all of those that are not the excess zeroes), , provided these individuals are the same classification of all other explatory variables (i.e. hosptibal, chronical condition, gender, education and insurance*. 
+
+
+```{r}
+1-exp(-0.31354004)
+```
+
+
+# Question 2
+
+Conceptual Question
+
+a) Since technically it is required to attend school, being that one is not incarcerated or suspended, I would say that the absents would be true zero's and that everyone is able to go to school (given that buses and proximity are accounted for). This would make me say that we would use a hurdle model. So, students who do not show up would be a true zero, and there should be no excessive given that people who are not allowed too are being accounted for and not in the school system. 
+
+b) Since the park asks all visitors, ones that are there to fish or not, I would say that there would be both true zero's and excessive zero's. Making the zero-inflated binomial model a good fit. (Could possibly be over dispersion if there isn't a limit to the quantity to be caught). This is justified since some people might be there just to play on the playground, walk etc and not just to fish. There will also most likely people that try to catch fish who are unsuccessful some days. 
+
+c) Given that we are suppose to choose one option. I would go with the zero-inflated model. The reason would be that there are for sure true zero's, some weeks people just do not make trades. There are different levels of investors and not all trade on a weekly basis, since it takes time for things to come to develop. In regards to the excessive zero's, there are times were people want to trade but might not be able too. Say I try but the stocks are closed, or that I am in the middle of investments that are on term and cannot do so. I am an investor in government bonds, I am on vacation and cannot get through. There seem to be a lot of small scenarios that could lead to possible excessive zeros.
+
+d) The model for loan defaults would lead me to believe this should be a hurdle model. This is assuming that the model would be created so that any good standing loans would be a 0 and that would mean it should be a true zero and that the quantity of payments outstanding would be the response variable values. This would be on a random basis which would show that the loans have already been taken out so the people or individuals that want one have one so there should be no excessive zero's.
+
+
+
+
+
+
+
+
