@@ -1,0 +1,169 @@
+---
+title: ST_537 Case Study
+output: html_notebook
+author: Christopher Odell
+---
+
+# Case Study (Crohn’s disease)
+Crohn’s disease is a chronic inflammatory disease of the intestines. The package
+robustbase includes a small dataset CrohnD of 117 patients in three groups, one
+placebo group and two different drug groups
+
+> Libraries
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(robustbase)
+library(grid)
+library(gridExtra)
+
+crohn <- CrohnD
+head(crohn)
+
+
+```
+
+
+## Question 1
+
+Draw plots to show there are equal numbers in the three treatment groups, but
+not equal numbers by gender or country.
+
+In the first plot below we can see that the ratio of females to males is not equal, while the treatment groups have a comparable number for each group. 
+
+```{r}
+a <- ggplot(crohn,aes(x = sex)) +
+    geom_bar( colour = "black", fill = "white")
+b <- ggplot(crohn,aes(x = treat)) +
+    geom_bar( colour = "black", fill = "white")
+
+grid.arrange(arrangeGrob(a, b, ncol=2, widths=c(1,2)))
+
+```
+
+## Question 2
+
+Which plot would you draw to show the counts for all gender, country, and treatment
+combinations?
+
+Assuming that this needs to be one "plot" with all combinations. I should compile some together and make it a double decker as discussed. See plot below:
+
+There was some exploratory plots that are commented out. 
+
+```{r}
+
+with(crohn, prop.table(table(country)))
+work <- with(CrohnD, ftable(table(sex,country, treat)))
+
+#p0 <- ggplot(crohn)+ geom_bar() + ylab("")
+#p1 <- p0 + aes(x=country)
+#p2 <- p0 + aes(x=sex) + xlab("Weeks worked in 1979")
+#k <- ggplot(crohn) + geom_bar() + ylab("") + ylim(0,40)
+#p3 <- k + aes(x= crohn$treat == "placebo") + xlab("placebo")
+#p4 <- k + aes(x=(crohn$treat == "d1")) + xlab("group 1")
+#p5 <- k + aes(x=(crohn$treat == "d2")) + xlab("group 2")
+
+#grid.arrange(arrangeGrob(p1, p2, ncol=2, widths=c(3,3)),
+#arrangeGrob(p3, p4, p5, ncol=6),
+#nrow=2, heights=c(1.25,1))
+
+doubledecker(with(CrohnD, ftable(table(treat,country,sex))), data = work,
+gp = gpar(fill = c("grey90", "green")),
+spacing=spacing_equal(0))
+
+```
+
+## Question 3
+
+The key outcome variable is the number of adverse events, nrAdvE. What
+graphic would you choose to display its distribution? What about a set of three
+graphics, comparing the distributions of the numbers of adverse events for the
+three treatment groups?
+
+A simple bar plot is a nice start, it also really brings out the high count of zero's which would make use think about zero inflated data. For another touch though, I thought the freqpoly function also served it's purpose here. When we want to look at a set of of three plots to talk about the distribution of adverse by treatment. I think we need to start with a story of male and female, then about the age makeup. (Here I started with a treatment outlook vs age which had an interesting sign about the range of placebo vs others however I wanted to stay with my story and see how age was spear across adverse by gender and how gender was made up). This brings us around to the key look of treatment vs adverse with gender. This was done in a boxplot since it is higher in the order of preattentive details.
+
+There is also a set of three graphics to just discuss strictly the effects of adverse vs treatment in three different ways. Depending on the story we wish to tell this could have different impact and changes. The story here that we miss is how much the gender seems to skew some of the patters such as there being more males in the placebo vs other treatments. 
+
+
+```{r}
+
+ ggplot(crohn,aes(x = nrAdvE)) +
+    geom_bar( colour = "black", fill = "white")
+
+ggplot(crohn,aes(x = nrAdvE, y = ..density..)) +
+    geom_freqpoly(binwidth = 2)
+
+ggplot(crohn,aes(x = nrAdvE)) +
+    geom_freqpoly(aes(color = sex),binwidth = 1)
+
+
+a <- ggplot(crohn, aes(x=sex)) + geom_bar(aes(fill=sex)) +
+scale_fill_manual(values = c("grey70", "red")) +
+guides(fill=FALSE) + ylab("")
+b <- ggplot(crohn, aes(x=age, y=nrAdvE, colour=sex)) +
+  scale_colour_manual(values = c("grey70", "red")) +
+geom_point(size=3) 
+c <- ggplot(crohn, aes(x=treat , y = nrAdvE))+geom_boxplot(aes(color =sex), width = .15)+
+xlab("")  +
+theme(legend.position = "none") +
+scale_colour_manual(values = c("grey","red"))
+  
+  
+grid.arrange(arrangeGrob(a, b, ncol=2, widths=c(1,2)),c, nrow=2)
+
+
+a1 <- ggplot(crohn, aes(x=nrAdvE)) + geom_bar(aes(fill=treat), position =  position_dodge(.8)) +
+  theme_dark()
+b1 <- ggplot(crohn, aes(x=nrAdvE, y=age, colour=treat)) +
+geom_point(size=3) +
+  theme_dark()
+c1 <- ggplot(crohn, aes(x=treat , y = nrAdvE))+geom_boxplot(aes(fill =treat))+
+xlab("")  +
+theme_dark()
+  
+  
+grid.arrange(arrangeGrob(a1, b1, ncol=2, widths=c(1,2)),c1, nrow=2)
+
+
+```
+
+
+## Question 4
+
+Draw histograms of the other five variables, including ID. Explain why you
+chose the binwidths you use and describe what information you can see in the
+displays.
+
+For ID: Choose a really high bin of 2,000 this is because the ID numbers are all ver large and wanted to see a good amount of distribution in one bin. Here we can see that they are clustered between less than 30000 and approx above 50000
+
+For BMI: This was a small bin of 1, since BMI is a relativiely small number and a fluctuation in this can be meaningful, it seemed appropriate to have a smaller bin. We can see in the distribution that there is a slight right skew, and that it really drops off less than 20.
+
+For Height: Went with 2 as the bin, this is since heightin measurements can have a change in weight directly, that these should be broken out to a number that seems harder to see the different in measurement. We can see the distribution is more normal here though, with a slight increase on the right side. It would be intersting to see if this is the change from male subjects.
+
+For Wieght: Since weight can change slightly by what you eat in a day, it didn't make sense to get into too small of a scale. For that matter, went with 2.5 as the bin. Here we can see the distribution as a couple of potential outliers. Another interesting view is right around where we would possible suspect to see the mean there is a drop in count. 
+
+For Age: Went with a bin of 5. I notice that during a lot of races an activities that I am involved in it appears to be standard to break ages into 5 year increments. This same logic fit nicely here as we can see the more normal distribution in age without getting too particulate about it since months could define a round up or down in age. 
+
+
+```{r}
+
+p1 <- ggplot(crohn,aes(x = ID)) +
+    geom_histogram( colour = "black", fill = "white", binwidth = 2000)
+
+p2 <- ggplot(crohn,aes(x = BMI)) +
+    geom_histogram( colour = "black", fill = "white", binwidth = 1)
+
+p3 <- ggplot(crohn,aes(x = height)) +
+    geom_histogram( colour = "black", fill = "white", binwidth = 2)
+  
+p4 <- ggplot(crohn,aes(x = weight)) +
+    geom_histogram( colour = "black", fill = "white", binwidth = 2.5)
+
+p5 <-  ggplot(crohn,aes(x = age)) +
+    geom_histogram( colour = "black", fill = "white", binwidth = 5)
+
+grid.arrange(arrangeGrob(p1, p2,p3, ncol=2, widths=c(2,1)),p4,p5, nrow=2)
+
+```
+
