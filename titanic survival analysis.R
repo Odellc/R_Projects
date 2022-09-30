@@ -97,3 +97,95 @@ ggplot(data.combined[1:891,], aes(x=Title, fill=Survived)) +
 
 #What's the distribution of females to males across train & test
 table(data.combined$Sex)
+
+
+#Visualize the 3-way relationship of sex, pclass, and survival, compare to analysis
+ggplot(data.combined[1:891,], aes(x=Sex, fill=Survived))+
+  geom_bar()+
+  facet_wrap(~Pclass)+
+  xlab("Sex")+
+  ylab("Total Count")+
+  labs(fill="Survived")
+
+#OK, age and sex seem pretty important as derived from analysis of title, lets take a
+#look at the distributions of age over entire data set
+summary(data.combined$Age)
+summary(data.combined[1:891,"Age"]) #High portion of training has NA's
+
+#Just to be thorough, take a look at the survival broken out by sex, pclass, and age
+ggplot(data.combined[1:891,], aes(x=Age, fill=Survived))+
+  geom_histogram()+
+  facet_wrap(~Sex + Pclass)+
+  xlab("Age")+
+  ylab("Total Count")+
+  labs(fill="Survived")
+
+#Validate that "Master." is a good proxy for male children
+boys <- data.combined[which(data.combined$Title == "Master."),]
+summary(boys)
+
+#We know that Misses is more complicated, let's investigate
+misses <- data.combined[which(data.combined$Title == "Miss."),]
+summary(misses$Age)
+
+ggplot(misses[misses$Survived != "None",], aes(x=Age, fill=Survived))+
+  facet_wrap(~Pclass)+
+  geom_histogram(binwidth = 5)+
+  ggtitle("Age for 'Miss. by Pclass")+
+  xlab("Age")+
+  ylab("Total Count")
+
+#Ok, appears female children may have a different survival rate,
+#could be a candidate for feature engineering later
+misses.alone <- misses[which(misses$SibSp ==0 & misses$Parch == 0),]
+summary(misses.alone$Age)
+length(which(misses.alone$Age <= 14.5))
+
+
+#Move on to the Sibsp variable, summarize
+summary(data.combined$SibSp)
+
+#Can we treat it as a factor?
+length(unique(data.combined$SibSp))
+
+#Turn into a factor
+data.combined$SibSp <- as.factor(data.combined$SibSp)
+
+#We believe title is predictive. Visualize survival rates by Sibsp, plcass, and title
+ggplot(data.combined[1:891,], aes(x=SibSp, fill=Survived))+
+  geom_bar()+
+  facet_wrap(~Pclass + Title)+
+  xlab("SibSp")+
+  ylab("Total Count")+
+  ylim(0,300)+
+  labs(fill="Survived")
+
+#Treat the parch variable as a factor
+data.combined$Parch <- as.factor(data.combined$Parch)
+
+#We believe title is predictive. Visualize survival rates by Parch, plcass, and title
+ggplot(data.combined[1:891,], aes(x=Parch, fill=Survived))+
+  geom_bar()+
+  facet_wrap(~Pclass + Title)+
+  xlab("Parch")+
+  ylab("Total Count")+
+  ylim(0,300)+
+  labs(fill="Survived")
+
+#Let's try some feature engineering. What about creating a family size feature?
+temp.sibp <- c(train$SibSp, test$SibSp)
+temp.parch <- c(train$Parch, test$Parch)
+data.combined$Family.size <- as.factor(temp.sibp + temp.parch)
+
+#Visualize it to see if it may be predictive
+ggplot(data.combined[1:891,], aes(x=Family.size, fill=Survived))+
+  geom_bar()+
+  facet_wrap(~Pclass + Title)+
+  xlab("Family Size")+
+  ylab("Total Count")+
+  ylim(0,300)+
+  labs(fill="Survived")
+
+
+
+
